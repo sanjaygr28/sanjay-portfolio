@@ -60,7 +60,7 @@ export default function PortfolioPreview() {
     { id: 2, title: 'Predict Star Type', tag: 'ML', desc: 'Classifies stars using features like temperature, luminosity; uses KNN and Random Forest.', tech: 'Python, scikit-learn', img: '/projects/predict_star.jpg', link: '/projects/2' },
     { id: 3, title: 'Jarvis Automated Desktop', tag: 'Python App', desc: 'Voice-driven assistant automating desktop tasks (open apps, control system, fetch info).', tech: 'Python, SpeechRecognition, PyQT5', img: '/projects/Jarvis.jpg', link: '/projects/3' },
     { id: 4, title: 'AI-Powered Medical Diagnosis', tag: 'DL', desc: 'Flask web app predicting brain tumor, lung cancer, and fractures using CNN models.', tech: 'Python, TensorFlow, Flask', img: '/projects/medical_ai.png', link: '/projects/4' },
-    { id: 5, title: 'Predicting Employee Attrition', tag: 'ML', desc: 'Model predicting employee turnover using feature engineering and scikit-learn.', tech: 'Python, scikit-learn, Pandas', img: '/projects/Employee_Attrition.jpg', link: '/projects/5' }
+    { id: 5, title: 'Predicting Employee Attrition', tag: 'ML', desc: 'Model predicting employee turnover using feature engineering and scikit-learn.', tech: 'Python, scikit-learn, Pandas', img: '/projects/Employee_attrition.jpg', link: '/projects/5' }
   ];
 
   const tabs = ['All','ML','DL','Power BI','Web Dev','Python App'];
