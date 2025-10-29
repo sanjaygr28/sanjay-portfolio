@@ -1,7 +1,7 @@
 'use client'
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sun, Moon, Github, Linkedin, Mail, Phone, MapPin, Send, ChevronUp } from "lucide-react";
+import { Sun, Moon, Github, Linkedin, Mail, Phone, MapPin, Send, ChevronUp, Menu, X } from "lucide-react";
 
 export default function PortfolioPreview() {
   // ---------- THEME (persisted) ----------
@@ -38,7 +38,6 @@ export default function PortfolioPreview() {
   }, [darkMode]);
 
   // ---------- FORMSPREE CONFIG ----------
-  // Replace this with your Formspree endpoint: https://formspree.io/f/XXXXXX
   const USE_FORMSPREE = true;
   const FORMSPREE_ENDPOINT = 'https://formspree.io/f/xvgvzbpv';
 
@@ -47,6 +46,10 @@ export default function PortfolioPreview() {
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState(null);
   const containerRef = useRef(null);
+
+  // mobile menu
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobilePanelRef = useRef(null);
 
   // contact form state
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +96,30 @@ export default function PortfolioPreview() {
       window.removeEventListener('scroll', onScroll);
     };
   }, []);
+
+  // close mobile menu when clicking outside or on link
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!mobileOpen) return;
+      if (mobilePanelRef.current && !mobilePanelRef.current.contains(e.target)) {
+        setMobileOpen(false);
+      }
+    };
+    document.addEventListener('click', onDocClick);
+    return () => document.removeEventListener('click', onDocClick);
+  }, [mobileOpen]);
+
+  // lock body scroll when menu open
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const original = document.body.style.overflow;
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = original || '';
+    }
+    return () => { document.body.style.overflow = original || ''; };
+  }, [mobileOpen]);
 
   const handleImageTap = (p) => {
     if (!isTouchDevice) {
@@ -143,12 +170,10 @@ export default function PortfolioPreview() {
           setSubmitResult({ ok: true, msg: 'Message sent — I will reply within 24 hours.' });
           form.reset();
         } else {
-          // Formspree returns helpful messages in JSON
           const errMsg = data?.error || (data?.errors && data.errors.map(x=>x.message).join(', ')) || 'Submission failed';
           setSubmitResult({ ok: false, msg: errMsg });
         }
       } else {
-        // fallback (not used here) — POST to /api/contact
         const res = await fetch('/api/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -199,7 +224,7 @@ export default function PortfolioPreview() {
       `}</style>
 
       {/* Header */}
-      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/8 border-b border-white/5">
+      <header className="sticky top-0 z-50 backdrop-blur-md bg-white/8 border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold">SG</div>
@@ -209,7 +234,8 @@ export default function PortfolioPreview() {
             </div>
           </div>
 
-          <nav className="flex items-center gap-3 sm:gap-4">
+          {/* Desktop nav (hidden on small screens) */}
+          <nav className="hidden sm:flex items-center gap-3 sm:gap-4">
             <a href="#projects" className="text-sm hover:underline">Projects</a>
             <a href="#experience" className="text-sm hover:underline">Experience</a>
             <a href="#contact" className="text-sm hover:underline">Contact</a>
@@ -224,7 +250,87 @@ export default function PortfolioPreview() {
               {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
             </button>
           </nav>
+
+          {/* Right side: desktop buttons */}
+          <div className="hidden sm:flex items-center gap-3">
+            <a
+              href="#projects"
+              className="px-4 py-2 rounded-full bg-white text-blue-700 font-semibold hover:opacity-95"
+            >
+              View Projects
+            </a>
+            <a
+              href="/Sanjay_G_R_CV.pdf"
+              download="Sanjay_G_R_CV.pdf"
+              className="px-4 py-2 rounded-full border border-white/30 hover:bg-white/5"
+              title="Download CV (PDF)"
+            >
+              Download CV
+            </a>
+          </div>
+
+          {/* Mobile: hamburger */}
+          <div className="sm:hidden flex items-center">
+            <button
+              onClick={() => setMobileOpen(prev => !prev)}
+              aria-expanded={mobileOpen}
+              aria-controls="mobile-menu"
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-white/40"
+            >
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile panel (slide-down) */}
+        <motion.div
+          id="mobile-menu"
+          ref={mobilePanelRef}
+          initial={false}
+          animate={mobileOpen ? { height: 'auto', opacity: 1 } : { height: 0, opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          className={`sm:hidden overflow-hidden bg-[#2b2547] border-t border-white/5`}
+        >
+          <div className="px-4 pt-4 pb-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center font-bold">SG</div>
+                <div>
+                  <div className="font-semibold">SANJAY</div>
+                  <div className="text-xs opacity-80">Data Science</div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => { setDarkMode(prev => !prev); }}
+                className={`p-2 rounded-full ${darkMode ? 'bg-yellow-400/10' : 'bg-white/10'}`}
+                aria-label="Toggle theme"
+                title={darkMode ? 'Switch to light' : 'Switch to dark'}
+              >
+                {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
+              </button>
+            </div>
+
+            <nav className="flex flex-col gap-2">
+              <a onClick={() => setMobileOpen(false)} href="#projects" className="py-3 px-3 rounded-md hover:bg-white/5">Projects</a>
+              <a onClick={() => setMobileOpen(false)} href="#experience" className="py-3 px-3 rounded-md hover:bg-white/5">Experience</a>
+              <a onClick={() => setMobileOpen(false)} href="#contact" className="py-3 px-3 rounded-md hover:bg-white/5">Contact</a>
+            </nav>
+
+            <div className="mt-4 flex flex-col gap-2">
+              <a onClick={() => setMobileOpen(false)} href="#projects" className="py-2 px-3 rounded-full bg-white text-blue-700 font-semibold text-center">View Projects</a>
+              <a onClick={() => setMobileOpen(false)} href="/Sanjay_G_R_CV.pdf" download="Sanjay_G_R_CV.pdf" className="py-2 px-3 rounded-full border border-white/20 text-center">Download CV</a>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="flex gap-3">
+                <a href="https://linkedin.com/in/sanjay-gr-807599316" className="p-2 bg-white/10 rounded-xl hover:bg-white/20 text-white transition"><Linkedin size={18} /></a>
+                <a href="https://github.com/sanjaygr28" className="p-2 bg-white/10 rounded-xl hover:bg-white/20 text-white transition"><Github size={18} /></a>
+              </div>
+            </div>
+          </div>
+        </motion.div>
       </header>
 
       {/* Main */}
@@ -287,17 +393,29 @@ export default function PortfolioPreview() {
             </div>
           </div>
 
-          <div ref={containerRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
+          {/* Container: mobile = horizontal snap carousel, sm+ = grid */}
+          <div
+            ref={containerRef}
+            className={`mt-5
+              flex gap-4 px-4 sm:px-0 overflow-x-auto snap-x snap-mandatory
+              sm:grid sm:grid-cols-1 sm:gap-5 sm:overflow-visible sm:snap-none
+              md:grid-cols-2 lg:grid-cols-3`}
+            aria-label="Featured projects list"
+          >
             {filtered.map(p=>(
               <motion.article
                 key={p.id}
                 whileHover={{ scale: isTouchDevice ? 1.0 : 1.02 }}
-                className="group relative bg-white/10 p-4 sm:p-5 rounded-2xl shadow-lg backdrop-blur-md overflow-hidden"
+                className={`
+                  group relative bg-white/10 p-4 rounded-2xl shadow-lg backdrop-blur-md overflow-hidden
+                  snap-start min-w-[82%] sm:min-w-0 sm:w-auto
+                `}
+                style={{ WebkitOverflowScrolling: 'touch' }}
                 role="article"
                 aria-labelledby={`project-title-${p.id}`}
               >
                 {/* Image area */}
-                <div className="rounded-lg mb-3 overflow-hidden relative h-44 sm:h-48 md:h-52">
+                <div className="rounded-lg mb-3 overflow-hidden relative h-56 sm:h-48 md:h-52">
                   <img
                     src={p.img}
                     alt={p.title}
@@ -306,6 +424,7 @@ export default function PortfolioPreview() {
                     style={{ cursor: 'pointer', touchAction: 'manipulation' }}
                   />
 
+                  {/* Overlay for hover/active - still there on desktop, but mobile will have visible CTA below */}
                   <div
                     className={
                       `absolute inset-0 bg-black/50 transition-opacity duration-250 flex items-center justify-center
@@ -325,25 +444,40 @@ export default function PortfolioPreview() {
                           View Project
                         </button>
                       </div>
-                      {isTouchDevice && (
-                        <div className="mt-2 text-xs opacity-80">Tap again to open</div>
-                      )}
                     </div>
                   </div>
                 </div>
 
+                {/* Card body */}
                 <h3 id={`project-title-${p.id}`} className="font-bold text-base sm:text-lg mb-1">{p.title}</h3>
                 <p className="text-xs sm:text-sm opacity-80 mb-3 leading-snug">{p.desc}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">{p.tech}</span>
-                  <button
-                    onClick={() => openProject(p)}
-                    className="text-xs sm:text-sm px-3 py-1 rounded-full bg-white/10"
-                    aria-label={`Quick view ${p.title}`}
-                  >
-                    View Details
-                  </button>
+
+                {/* Tags + actions area */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1">
+                    {/* tags row - horizontally scrollable if too many */}
+                    <div className="flex gap-2 overflow-x-auto py-1">
+                      <span className="text-xs bg-white/20 px-2 py-1 rounded-full shrink-0">{p.tech}</span>
+                      <span className="text-xs bg-white/10 px-2 py-1 rounded-full shrink-0">{p.tag}</span>
+                    </div>
+                  </div>
+
+                  {/* CTA - always visible on mobile (so users don't need to tap overlay twice) */}
+                  <div className="shrink-0">
+                    <button
+                      onClick={() => openProject(p)}
+                      className="text-xs sm:text-sm px-3 py-1 rounded-full bg-white/10"
+                      aria-label={`Open ${p.title}`}
+                    >
+                      View
+                    </button>
+                  </div>
                 </div>
+
+                {/* small hint for touch devices */}
+                {isTouchDevice && (
+                  <div className="mt-3 text-xs opacity-70">Swipe to browse • Tap image or View to open</div>
+                )}
               </motion.article>
             ))}
           </div>
