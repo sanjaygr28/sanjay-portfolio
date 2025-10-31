@@ -55,12 +55,6 @@ export default function PortfolioPreview() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
 
-  // ---------- VANTA refs ----------
-  const globeRef = useRef(null);         // DOM node for the globe (has the classes your snippet used)
-  const vantaInstanceRef = useRef(null); // hold VANTA instance so we can destroy
-  const scriptsLoadedRef = useRef(false);
-  const editPageUnsubRef = useRef(null);
-
   const projects = [
     { id: 1, title: 'Pre-owned Car Showroom Management', tag: 'Web Dev', desc: 'Web system for managing used car listings, customer inquiries, and purchase records.', tech: 'HTML, CSS, PHP, MySQL', img: '/projects/car_showroom.jpg', link: '/projects/1' },
     { id: 2, title: 'Predict Star Type', tag: 'ML', desc: 'Classifies stars using features like temperature, luminosity; uses KNN and Random Forest.', tech: 'Python, scikit-learn', img: '/projects/predict_star.jpg', link: '/projects/2' },
@@ -200,110 +194,6 @@ export default function PortfolioPreview() {
       setSubmitting(false);
     }
   };
-
-  // ---------- VANTA / three.js loader + init (uses your exact behaviour) ----------
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const THREE_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js';
-    const VANTA_SRC = 'https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js';
-
-    const ensureScript = (src) => new Promise((resolve, reject) => {
-      // if script already present, resolve immediately (or after load)
-      const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src && s.src.indexOf(src) !== -1);
-      if (existing) {
-        if (existing.getAttribute('data-loaded') === 'true') {
-          resolve();
-          return;
-        }
-        existing.addEventListener('load', () => resolve());
-        existing.addEventListener('error', (e) => reject(e));
-        return;
-      }
-      const s = document.createElement('script');
-      s.src = src;
-      s.async = true;
-      s.onload = () => { s.setAttribute('data-loaded','true'); resolve(); };
-      s.onerror = (e) => reject(e);
-      document.head.appendChild(s);
-    });
-
-    let subscribed = false;
-
-    const setVanta = () => {
-      try {
-        if (!window.VANTA) return;
-        // ensure we destroy any previous instance
-        if (vantaInstanceRef.current) {
-          try { vantaInstanceRef.current.destroy(); } catch (e) {}
-          vantaInstanceRef.current = null;
-        }
-
-        // find element by classes (to match your snippet's selector)
-        const el = globeRef.current || document.querySelector('.s-page-1 .s-section-1 .s-section');
-        if (!el) return;
-
-        // init VANTA globe (same options you provided)
-        vantaInstanceRef.current = window.VANTA.GLOBE({
-          el,
-          mouseControls: true,
-          touchControls: true,
-          gyroControls: false,
-          minHeight: 200.00,
-          minWidth: 200.00,
-          scale: 1.00,
-          scaleMobile: 1.00
-        });
-
-        // subscribe to window.edit_page.Event if available (Strikingly behaviour)
-        if (window.edit_page && window.edit_page.Event && typeof window.edit_page.Event.subscribe === 'function') {
-          try {
-            // call subscribe and store returned token/unsub if provided
-            const unsub = window.edit_page.Event.subscribe("Page.beforeNewOneFadeIn", setVanta);
-            editPageUnsubRef.current = unsub;
-            subscribed = true;
-          } catch (e) {
-            // ignore
-          }
-        }
-      } catch (e) {
-        // non-fatal
-        // console.warn('Vanta init failed', e);
-      }
-    };
-
-    (async () => {
-      try {
-        if (!scriptsLoadedRef.current) {
-          await ensureScript(THREE_SRC);
-          await ensureScript(VANTA_SRC);
-          scriptsLoadedRef.current = true;
-        }
-        setVanta();
-      } catch (e) {
-        // loading failed — silently continue without background
-        // console.warn('Failed to load Vanta scripts', e);
-      }
-    })();
-
-    return () => {
-      // cleanup on unmount
-      try {
-        if (vantaInstanceRef.current) {
-          try { vantaInstanceRef.current.destroy(); } catch (e) {}
-          vantaInstanceRef.current = null;
-        }
-        // if subscribe returned an unsubscribe function, try calling it
-        if (subscribed && window.edit_page && window.edit_page.Event && typeof window.edit_page.Event.unsubscribe === 'function') {
-          try {
-            window.edit_page.Event.unsubscribe("Page.beforeNewOneFadeIn", editPageUnsubRef.current);
-          } catch (e) {}
-        } else if (editPageUnsubRef.current && typeof editPageUnsubRef.current === 'function') {
-          try { editPageUnsubRef.current(); } catch (e) {}
-        }
-      } catch (e) {}
-    };
-  }, []); // run once on client
 
   // ---------- ROOT CLASS (theme) ----------
   const rootClass = `min-h-screen bg-aurora relative ${darkMode ? 'theme-dark text-white' : 'text-gray-100'}`;
@@ -485,15 +375,6 @@ export default function PortfolioPreview() {
             </div>
           </motion.div>
         </section>
-
-        {/* Vanta globe container (placed near top so it can act as a background/hero)
-            NOTE: className matches your original selector: ".s-page-1 .s-section-1 .s-section"
-        */}
-        <div
-          ref={globeRef}
-          className="s-page-1 s-section-1 s-section pointer-events-none fixed inset-0 -z-10"
-          aria-hidden="true"
-        />
 
         {/* Projects */}
         <section id="projects" className="mt-12">
