@@ -55,6 +55,12 @@ export default function PortfolioPreview() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
 
+  // Vanta related refs
+  const vantaRef = useRef(null); // holds the VANTA effect instance
+  const globeContainerRef = useRef(null); // element to attach Vanta to
+  const vantaScriptsLoadedRef = useRef(false);
+  const vantaUnsubRef = useRef(null);
+
   const projects = [
     { id: 1, title: 'Pre-owned Car Showroom Management', tag: 'Web Dev', desc: 'Web system for managing used car listings, customer inquiries, and purchase records.', tech: 'HTML, CSS, PHP, MySQL', img: '/projects/car_showroom.jpg', link: '/projects/1' },
     { id: 2, title: 'Predict Star Type', tag: 'ML', desc: 'Classifies stars using features like temperature, luminosity; uses KNN and Random Forest.', tech: 'Python, scikit-learn', img: '/projects/predict_star.jpg', link: '/projects/2' },
@@ -195,6 +201,99 @@ export default function PortfolioPreview() {
     }
   };
 
+  // ---------- VANTA: load scripts and initialize globe ----------
+  useEffect(() => {
+    // only run on client
+    if (typeof window === 'undefined') return;
+
+    const THREE_SRC = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js';
+    const VANTA_SRC = 'https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.globe.min.js';
+
+    const ensureScript = (src) => new Promise((resolve, reject) => {
+      // if already loaded, resolve
+      const existing = Array.from(document.getElementsByTagName('script')).find(s => s.src && s.src.indexOf(src) !== -1);
+      if (existing) {
+        existing.addEventListener('load', () => resolve());
+        if ((existing as any).readyState === 'complete') resolve();
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = src;
+      s.async = true;
+      s.onload = () => resolve();
+      s.onerror = (e) => reject(e);
+      document.head.appendChild(s);
+    });
+
+    let subscribed = false;
+
+    const setVanta = () => {
+      try {
+        if (!window.VANTA || !globeContainerRef.current) return;
+        // destroy previous instance if exists
+        if (vantaRef.current) {
+          try { vantaRef.current.destroy(); } catch (e) {}
+          vantaRef.current = null;
+        }
+
+        // create a new vanta globe attached to the node
+        vantaRef.current = window.VANTA.GLOBE({
+          el: globeContainerRef.current,
+          mouseControls: true,
+          touchControls: true,
+          gyroControls: false,
+          minHeight: 200.00,
+          minWidth: 200.00,
+          scale: 1.00,
+          scaleMobile: 1.00
+        });
+
+        // if an edit_page event bus exists, subscribe to re-init on page changes
+        if (window.edit_page && window.edit_page.Event && typeof window.edit_page.Event.subscribe === 'function') {
+          // store unsubscribe function so we can clean it up
+          try {
+            vantaUnsubRef.current = window.edit_page.Event.subscribe('Page.beforeNewOneFadeIn', setVanta);
+            subscribed = true;
+          } catch (e) {
+            // some implementations return a token instead of function; skip in that case
+            subscribed = true;
+          }
+        }
+      } catch (e) {
+        // swallow — non-critical
+        // console.warn('Vanta init error', e);
+      }
+    };
+
+    // load scripts sequentially then init
+    (async () => {
+      try {
+        if (!vantaScriptsLoadedRef.current) {
+          await ensureScript(THREE_SRC);
+          await ensureScript(VANTA_SRC);
+          vantaScriptsLoadedRef.current = true;
+        }
+        setVanta();
+      } catch (e) {
+        // failed to load — ignore silently
+        // console.warn('Failed to load Vanta scripts', e);
+      }
+    })();
+
+    return () => {
+      // cleanup
+      try {
+        if (vantaRef.current) {
+          try { vantaRef.current.destroy(); } catch (e) {}
+          vantaRef.current = null;
+        }
+        if (subscribed && window.edit_page && window.edit_page.Event && typeof window.edit_page.Event.unsubscribe === 'function') {
+          try { window.edit_page.Event.unsubscribe('Page.beforeNewOneFadeIn', vantaUnsubRef.current); } catch (e) {}
+        }
+      } catch (e) {}
+    };
+  }, []);
+
   // ---------- ROOT CLASS (theme) ----------
   const rootClass = `min-h-screen bg-aurora relative ${darkMode ? 'theme-dark text-white' : 'text-gray-100'}`;
 
@@ -216,8 +315,8 @@ export default function PortfolioPreview() {
           background-size: auto;
           animation: none;
         }
-        .theme-dark .bg-white\\/10 { background-color: rgba(255,255,255,0.03) !important; }
-        .theme-dark .bg-white\\/5 { background-color: rgba(255,255,255,0.02) !important; }
+        .theme-dark .bg-white\/10 { background-color: rgba(255,255,255,0.03) !important; }
+        .theme-dark .bg-white\/5 { background-color: rgba(255,255,255,0.02) !important; }
         .theme-dark .text-gray-100 { color: #E6EEF8 !important; }
         .theme-dark a { color: #9FC5FF; }
         .theme-dark .shadow-lg { box-shadow: 0 6px 18px rgba(0,0,0,0.6); }
@@ -375,6 +474,9 @@ export default function PortfolioPreview() {
             </div>
           </motion.div>
         </section>
+
+        {/* Vanta globe container (placed near top so it can act as a background/hero) */}
+        <div ref={globeContainerRef} className="s-page-1 s-section-1 s-section pointer-events-none fixed inset-0 -z-10" aria-hidden="true" />
 
         {/* Projects */}
         <section id="projects" className="mt-12">
